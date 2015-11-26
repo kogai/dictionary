@@ -5,14 +5,17 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"log"
 	"os"
+	"time"
 )
 
+type Word struct {
+	ID        bson.ObjectId `bson:"_id"`
+	Word      string        `bson:word`
+	lastQuery time.Time     `bson:lastquery`
+}
+
 type Book struct {
-	ID          bson.ObjectId `bson:"_id"`
-	Author      []string      `bson:"author"`
-	Title       []string      `bson:"title"`
-	Url         []string      `bson:"url"`
-	IsKindlized bool          `bson:"iskindlized"`
+	Title []string `bson:"title"`
 }
 
 func main() {
@@ -23,11 +26,10 @@ func main() {
 	database := session.DB("kindlized")
 	collection := database.C("books")
 
-	b := new(Book)
-	count, _ := collection.Count()
-	query := collection.Find(bson.M{})
-	query.One(&b)
+	var books []Book
 
-	log.Println(b)
-	log.Println(count)
+	query := collection.Find(bson.M{})
+	query.All(&books)
+
+	log.Println(books)
 }
