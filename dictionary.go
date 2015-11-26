@@ -1,10 +1,12 @@
 package main
 
 import (
+	"github.com/ikawaha/kagome/tokenizer"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"log"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -26,10 +28,25 @@ func main() {
 	database := session.DB("kindlized")
 	collection := database.C("books")
 
-	var books []Book
-
 	query := collection.Find(bson.M{})
-	query.All(&books)
 
-	log.Println(books)
+	b := new(Book)
+	query.One(&b)
+
+	title := b.Title[0]
+
+	t := tokenizer.New()
+	tokens := t.Tokenize(title)
+	for _, token := range tokens {
+		if token.Class == tokenizer.DUMMY {
+			// BOS: Begin Of Sentence, EOS: End Of Sentence.
+			log.Println("%s\n", token.Surface)
+			continue
+		}
+		features := strings.Join(token.Features(), ",")
+		log.Println("%s\t%v\n", token.Surface, features)
+	}
+	// var books []Book
+	// query.All(&books)
+	// log.Println(books)
 }
