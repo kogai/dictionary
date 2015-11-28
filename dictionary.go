@@ -6,14 +6,13 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"log"
 	"os"
-	"strings"
 	"time"
 )
 
 type Word struct {
 	ID        bson.ObjectId `bson:"_id"`
 	Word      string        `bson:word`
-	lastQuery time.Time     `bson:lastquery`
+	LastQuery time.Time     `bson:lastquery`
 }
 
 type Book struct {
@@ -26,9 +25,9 @@ func main() {
 	defer session.Close()
 
 	database := session.DB("kindlized")
-	collection := database.C("books")
 
-	query := collection.Find(bson.M{})
+	booksCollection := database.C("books")
+	query := booksCollection.Find(bson.M{})
 
 	b := new(Book)
 	query.One(&b)
@@ -38,13 +37,22 @@ func main() {
 	t := tokenizer.New()
 	tokens := t.Tokenize(title)
 	for _, token := range tokens {
-		if token.Class == tokenizer.DUMMY {
-			// BOS: Begin Of Sentence, EOS: End Of Sentence.
-			log.Println("%s\n", token.Surface)
-			continue
+		if token.Class == tokenizer.KNOWN {
+			log.Println(token.Surface)
+			newWord := &Word{
+				ID:        bson.NewObjectId(),
+				Word:      token.Surface,
+				LastQuery: time.Now(),
+			}
+
+			q := database.C("words").Find(bson.M{
+				"word": token.Surface,
+			})
+			count, _ := q.Count()
+			if count == 0 {
+				database.C("words").Insert(newWord)
+			}
 		}
-		features := strings.Join(token.Features(), ",")
-		log.Println("%s\t%v\n", token.Surface, features)
 	}
 	// var books []Book
 	// query.All(&books)
